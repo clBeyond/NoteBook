@@ -108,6 +108,183 @@ xmlns:p="http://www.springframework.org/schema/p"
     <bean id = "userDaoImpl" class="com.company.dao.UserDaoDemo"></bean>
 ```
 （3）注入属性-内部bean和级联赋值
-1. 基于注解方式实现
+（1） 一对多关系：部门和员工的关系
+```java
+//内部bean
+ <bean id = "emp " class = "com.company.bean.Emp">
+        <property name="ename"  value="tom"></property>
+        <property name="gender"  value = "女"></property>
+        <property name="dept" >
+            <bean id = "dept_sales" class = "com.company.bean.Dept">  //内部嵌套
+                <property name="name"  value = "销售"></property>
+            </bean>
+        </property>
+        
+    </bean>
+```
+```java
+//级联赋值（1）
+ <bean id = "emp" class = "com.company.bean.Emp">
+        <property name="ename"  value="tom"></property>
+        <property name="gender"  value = "女"></property>
+        <property name="dept" ref = "dept"></property>
+    </bean>
+    <bean id = "dept" class="com.company.bean.Dept">  //在创建外部bean时注入值
+        <property name="name" value="财务"></property>
+    </bean>
+```
+```java
+<bean id = "emp" class = "com.company.bean.Emp">
+        <property name="ename"  value="tom"></property>
+        <property name="gender"  value = "女"></property>
+        <property name="dept" ref = "dept"></property>
+        <property name = "dept.dname" value = "技术部"> </property>  //这种写法要在Emp中写出dept的get方法
+    </bean>
+    <bean id = "dept" class="com.company.bean.Dept">  
+        <property name="name" value="财务"></property>
+    </bean>
+```
+
+##### IOC操作Bean管理（XML注入集合属性）
+1. 注入数组/List/Map/Set属性
+```java
+ <bean id = "stu" class="com.tongji.collectiontype.Stu">
+        <property name="course" >
+            <array>
+                <value>java</value>
+                <value>python</value>
+            </array>
+        </property>
+        <property name="list">
+            <list>
+                <value>小红</value>
+                <value>小明</value>
+            </list>
+        </property>
+        <property name="maps">
+            <map>
+                <entry key="1" value="90"></entry>
+                <entry key="2" value="89"></entry>
+            </map>
+        </property>
+        <property name="set">
+            <set>
+                <value>mysql</value>
+                <value>radis</value>
+            </set>
+        </property>
+    </bean>
+```  
+2. 在集合中设置对象类型
+```java
+<property name="courseList">
+            <list>
+                <ref bean="course1"></ref>
+                <ref bean="course2"></ref>
+                <ref bean="course3"></ref>
+            </list>
+        </property>
+    </bean>
+    <bean id = "course1" class="com.tongji.collectiontype.Course">
+        <property name="cname" value="mysql"></property>
+    </bean>
+    <bean id = "course2" class="com.tongji.collectiontype.Course">
+        <property name="cname" value="spring"></property>
+    </bean>
+    <bean id = "course3" class="com.tongji.collectiontype.Course">
+        <property name="cname" value="python"></property>
+    </bean>
+```
+3. 把集合注入部分提取出来
+```java
+//在Spring配置文件中引入名称空间util
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
 
+    
+</beans>
+//使用util标签完成list集合注入提取
+<util:list id = "bookList">
+        <value>天龙</value>
+        <value>倚天</value>
+    </util:list>
+
+    <bean id = "book" class="com.tongji.collectiontype.Book">
+        <property name="list" ref="bookList"></property>
+    </bean>
+```
+
+##### IOC操作bean管理（FactoryBean）
+普通bean和工厂bean
++ 普通bean ： 在配置文件中定义的bean的类型就是返回类型
++ 工厂bean ： 在配置文件中定义的bean类型可以和返回类型不同
+
+第一步 ： 创建类，让这个类作为工厂bean，实现接口factorybean
+第二步 ： 实现接口里的方法，在实现的方法中返回bean类型
+```java
+public class MyBean implements FactoryBean {  //实现接口
+
+    @Override
+    public Object getObject() throws Exception {  //在这里设置你想返回的类型
+        return null;
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return null;
+    }
+
+    @Override
+    public boolean isSingleton() {
+        return FactoryBean.super.isSingleton();
+    }
+}
+```
+
+##### IOC操作bean管理（bean的作用域）
+1. 在Spring里面，设置创建bean实例是多实例还是单实例
+2. 在Spring里面，默认情况下，bean是单实例 ，即多次调用getBean获得的是同一个对象
+3. 如何设置为多实例对象
+   通过bean标签里scope属性来设置
+   scope值 ： 1 默认 singleton 单实例  2 prototype 多实例
+```java
+    <bean id = "stu" class="com.tongji.collectiontype.Stu" scope="prototype">
+```
+   设置为单实例时，在加载配置文件时就会创建对象，多实例时，只有在调用getBean方法时才创建对象
+
+##### IOC操作bean管理（bean的生命周期）
+1. 生命周期
+   对象从创建到销毁的过程
+2. bean生命周期
+   （1）通过构造器创建bean实例（无参构造）
+   （2）为bean的属性设置值和对其他bean的引用（调用set方法）
+   （3）调用bean的初始化方法（需要配置初始化方法 <bean init-method = " "）
+   （4）bean可以使用了（对象获取到了）
+   （5）当容器关闭时，调用bean的销毁方法（需要进行配置销毁的方法 destroy-method = " "）
+3. 生命周期后置处理器
+   （1）通过构造器创建bean实例（无参构造）
+   （2）为bean的属性设置值和对其他bean的引用（调用set方法）
+   （3-1）把bean实例传递bean后置处理器的方法
+   （3-2）调用bean的初始化方法（需要配置初始化方法 <bean init-method = " "）
+   （3-3）把bean实例传递bean后置处理器的方法
+   （4）bean可以使用了（对象获取到了）
+   （5）当容器关闭时，调用bean的销毁方法（需要进行配置销毁的方法 destroy-method = " "）
+ 
+##### IOC操作bean管理（xml自动装配）
+bean标签属性autowire配置自动装配
+autowire有两个值
+（1） byName 根据属性名称注入，注入值bean的id值和类属性名称必须一致
+```java 
+<bean id = "emp" class="com.tongji.autowire.Emp" autowire="byName"> </bean>
+    <bean id = "dept" class="com.tongji.autowire.Dept"></bean>
+```
+（2） byType 根据属性类型注入
+此时相同类型的bean只能定义一个
+```java 
+<bean id = "emp" class="com.tongji.autowire.Emp" autowire="byType"> </bean>
+    <bean id = "dept" class="com.tongji.autowire.Dept"></bean>
+```
