@@ -288,3 +288,120 @@ autowire有两个值
 <bean id = "emp" class="com.tongji.autowire.Emp" autowire="byType"> </bean>
     <bean id = "dept" class="com.tongji.autowire.Dept"></bean>
 ```
+
+##### IOC操作Bean管理（引入外部属性文件）
+```java
+//引入context名称空间
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                          http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+```
+
+```java
+//  引入文件
+   <context:property-placeholder location="classpath:jdbc.properties"/>
+        <bean id = "dataSource" class = "com.alibaba.druid.pool.DruidDataSource">
+            <property name="driverClassName" value="${prop.driverClass}"></property>
+            <property name="url" value="${prop.url}"></property>
+            <property name="username" value="${prop.userName}"></property>
+            <property name="password" value="${prop.password}"></property>
+        </bean>
+```
+```java
+//jdbc.properties文件内容
+prop.driverClass=com.mysql.cj.jdbc.Driver
+prop.url=jdbc:mysql://localhost:3306.userDb
+prop.userName=root
+prop.password=Cl2133030*
+```
+
+##### IOC管理（基于注解方式）
+1. 什么是注解
+   （1）注解是代码特殊标记，格式：@注解名（属性名称=属性值，属性名称=属性值）
+   （2）使用注解，注解作用在类上面，方法上面，属性上面
+   （3）使用注解的目的：简化XML文件配置
+2. Bean管理提供的注解
+   （1）@Component
+   （2）@Service
+   （3）@Controller
+   （4）@Repository
+   上面四个注解功能一样，只是为了开发更清晰，不同注解用在不同层
+3. 基于注解方式创建对象
+   （1）引入依赖
+   （2）开启组件扫描
+        引入context名称空间
+```java
+        <context:component-scan base-package="com.zhujie"></context:component-scan>
+        ```
+        用context:component-scan标签指出要扫描的包的路径，若有多个包，可用，隔开，或者写他们上层目录
+```java
+   @Component (value="userService")   //相当于<bean id="userService" class="">
+   // value 可以不写，默认为类名首字母小写
+   public class UserService {
+      public void add(){
+          System.out.println("service add()...");
+    }
+}
+```
+ 开启组件扫描的细节
+```java
+//只扫描Component注解
+<context:component-scan base-package="com.zhujie" use-default-filters="false">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Component"/>
+    </context:component-scan>
+```
+```java
+//不扫描Component注解
+<context:component-scan base-package="com.zhujie" use-default-filters="false">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Component"/>
+    </context:component-scan>
+```
+4. 基于注解方式的属性注入
+   (1)@AutoWired：根据属性类型进行自动装配
+```java
+public class UserService {
+    @Autowired
+    private UserDao userDao;
+    public void add(){
+        System.out.println("service add()...");
+        userDao.add();
+    }
+}
+```
+   (2)@Qualifier：根据属性名进行注入
+   和Auto Wired一起使用，因为根据属性类型自动装配可能会出现一个接口多个实现类不知道匹配哪个的问题
+```java
+@Component (value="userService")   //<bean id="userService" class="">
+// value 可以不写，你认为类名首字母小写
+public class UserService {
+    @Autowired
+    @Qualifier(value = "userService")
+    private UserDao userDao;
+    public void add(){
+        System.out.println("service add()...");
+        userDao.add();
+    }
+}
+```
+   (3)@Resource：可以根据类型注入，也可以根据名称注入
+   @Resource(name = "userService")
+   @Resource
+   (4)@Value :注入普通类型属性
+```java
+public class UserService {
+    @Value(value = "abc")
+    private String name;
+    @Autowired
+    private UserDao userDao;
+    public void add(){
+        System.out.println(this.name);
+        userDao.add();
+    }
+}
+```
+
+5. 纯注解开发
+   （1）创建配置类，替代XML配置文件
